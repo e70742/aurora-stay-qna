@@ -1,10 +1,39 @@
 
 from langchain_openai import ChatOpenAI
 import os
+import re
+
+# Plain-language names guests use for each property (the ASH-XXX code is matched separately)
+PROPERTY_ALIASES = {
+    "ASH-ATL": ["atlanta", "midtown"],
+    "ASH-BOS": ["boston", "harbor"],
+    "ASH-CHI": ["chicago", "loop"],
+    "ASH-DEN": ["denver", "union"],
+    "ASH-MIA": ["miami", "brickell"],
+    "ASH-SEA": ["seattle", "pike"],
+}
 
 # Retrieve the top-k relevant chunks from the vector store
 def retrieve(query: str, k: int = 2,vectorstore=None) -> list[str]:
-    results = vectorstore.similarity_search(query, k=k)
+    results = []
+
+    # Put the record of any property named in the question first
+    text = query.lower()
+    words = set(re.findall(r"[a-z]+", text))
+    for code, aliases in PROPERTY_ALIASES.items():
+        if code.lower() in text or words & set(aliases):
+            results += vectorstore.similarity_search(
+                query, k=1, filter={"property": code}
+            )
+
+    # Fill the remaining slots by similarity, skipping chunks already chosen
+    seen = {r.page_content for r in results}
+    for r in vectorstore.similarity_search(query, k=k + len(results)):
+        if len(results) >= k:
+            break
+        if r.page_content not in seen:
+            results.append(r)
+            seen.add(r.page_content)
 
     # Return each chunk with its content and metadata
     return [
