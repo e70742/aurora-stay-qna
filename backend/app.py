@@ -14,6 +14,7 @@ from rag_utils import retrieve, rag
 
 EMBED_MODEL = "HarishMaths/Hotel-Policy-Embedding"
 VECTORSTORE_PATH = "chroma_db"
+VECTORSTORE_COLLECTION = "aurorastays_policy"
 
 
 # ---------------------------------------------------------
@@ -39,6 +40,7 @@ embeddings = HuggingFaceEmbeddings(
 # ---------------------------------------------------------
 
 vectorstore = Chroma(
+    collection_name=VECTORSTORE_COLLECTION,
     persist_directory=VECTORSTORE_PATH,
     embedding_function=embeddings,
 )
